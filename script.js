@@ -158,13 +158,23 @@ analyzeBtn.addEventListener('click', () => {
             
             // Add server errors that don't already exist in client errors
             serverErrors.forEach(serverError => {
+                // Transform server error to match client error format if needed
+                const formattedServerError = {
+                    line: serverError.line || 0,
+                    error: serverError.error || serverError.description || '',
+                    solution: serverError.solution || 'Review this code for potential issues.',
+                    example_fix: serverError.example_fix || ''
+                };
+                
+                // Check for duplicates
                 const isDuplicate = allErrors.some(clientError => 
-                    clientError.line === serverError.line && 
-                    clientError.description === serverError.description
+                    clientError.line === formattedServerError.line && 
+                    (clientError.error === formattedServerError.error || 
+                     clientError.description === formattedServerError.error)
                 );
                 
                 if (!isDuplicate) {
-                    allErrors.push(serverError);
+                    allErrors.push(formattedServerError);
                 }
             });
             
@@ -198,11 +208,9 @@ function detectPythonErrors(code) {
     let variables = new Set();
     let functions = new Map();
     let functionParams = new Set();
-    let usedVariables = new Set();
     let insideLoop = false;
     let insideFunction = false;
 
-    // ✅ Python built-in functions & keywords (to avoid false errors)
     const pythonKeywords = new Set([
         "if", "elif", "else", "for", "while", "def", "class", "try", "except", "finally", "return",
         "True", "False", "None", "and", "or", "not", "import", "print", "pass",
@@ -215,7 +223,6 @@ function detectPythonErrors(code) {
         let trimmed = line.trim();
         if (trimmed.startsWith('#')) return;
 
-        // ✅ Handle multi-line strings (''' or """)
         const tripleQuoteMatch = trimmed.match(/^(['"]{3})/);
         if (tripleQuoteMatch) {
             inMultilineString = !inMultilineString;
@@ -224,19 +231,27 @@ function detectPythonErrors(code) {
         if (inMultilineString) return;
 
         let codePart = trimmed.split('#')[0].trim();
-
-        // ✅ Ignore strings inside quotes
         codePart = codePart.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, "");
 
-        // 1️⃣ Missing colon in required statements
+        // Missing colon
         if (keywordsRequiringColon.test(codePart) && !codePart.endsWith(':')) {
-            errors.push({ type: 'Syntax Error', line: index + 1, description: 'Missing colon at the end of statement' });
+            errors.push({
+                line: index + 1,
+                error: 'Missing colon at the end of statement',
+                solution: 'Add a colon (:) at the end of this line.',
+                example_fix: `${codePart}:\n    # Indented block`
+            });
         }
 
-        // 2️⃣ Indentation Errors
+        // Indentation Errors
         const leadingSpaces = line.match(/^\s*/)[0].length;
         if (indentStack.length > 0 && leadingSpaces < indentStack[indentStack.length - 1] && trimmed !== '') {
-            errors.push({ type: 'Indentation Error', line: index + 1, description: 'Inconsistent indentation' });
+            errors.push({
+                line: index + 1,
+                error: 'Inconsistent indentation',
+                solution: 'Ensure consistent indentation (usually multiples of 4 spaces).',
+                example_fix: `def example():\n    print("Hello")  # Indented properly`
+            });
         }
         if (codePart.endsWith(':')) {
             indentStack.push(leadingSpaces + 4);
@@ -244,52 +259,24 @@ function detectPythonErrors(code) {
             indentStack.pop();
         }
 
-        // 3️⃣ Check for unmatched brackets
+        // Unmatched brackets
         for (let char of codePart) {
             if ("({[".includes(char)) {
                 bracketStack.push({ char, line: index + 1 });
             } else if (")}]".includes(char)) {
                 const last = bracketStack.pop();
                 if (!last || "({[".indexOf(last.char) !== ")}]".indexOf(char)) {
-                    errors.push({ type: 'Syntax Error', line: index + 1, description: `Unmatched bracket: ${char}` });
+                    errors.push({
+                        line: index + 1,
+                        error: `Unmatched bracket: ${char}`,
+                        solution: 'Ensure all opening brackets have a matching closing bracket.',
+                        example_fix: `my_list = [1, 2, 3]  # Brackets properly matched`
+                    });
                 }
             }
         }
 
-        // 4️⃣ Unmatched Quotes
-        const singleQuotes = (codePart.match(/'/g) || []).length;
-        const doubleQuotes = (codePart.match(/"/g) || []).length;
-        if (singleQuotes % 2 !== 0 || doubleQuotes % 2 !== 0) {
-            errors.push({ type: 'Syntax Error', line: index + 1, description: 'Unmatched quotation marks' });
-        }
-
-        // 5️⃣ Detect Variable Assignments
-        const varMatch = codePart.match(/^([a-zA-Z_]\w*)\s*=/);
-        if (varMatch) {
-            let varName = varMatch[1];
-            variables.add(varName);
-        }
-
-        // 6️⃣ Detect Function Definitions
-        const funcDefMatch = codePart.match(/^def\s+([a-zA-Z_]\w*)\(([^)]*)\)/);
-        if (funcDefMatch) {
-            let funcName = funcDefMatch[1];
-            let paramList = funcDefMatch[2].split(',').map(p => p.trim()).filter(p => p !== '');
-            functionParams = new Set(paramList);
-            functions.set(funcName, paramList.length);
-            insideFunction = true;
-        }
-
-        // 7️⃣ Detect Function Calls Before Definition
-        const funcCallMatch = codePart.match(/([a-zA-Z_]\w*)\(([^)]*)\)/);
-        if (funcCallMatch) {
-            let funcName = funcCallMatch[1];
-            if (!functions.has(funcName) && !pythonKeywords.has(funcName)) {
-                errors.push({ type: 'Name Error', line: index + 1, description: `Function "${funcName}" called before definition` });
-            }
-        }
-
-        // 8️⃣ Detect Undefined Variables
+        // Undefined Variables
         const words = codePart.split(/[\s(),]+/);
         words.forEach(word => {
             if (/^[a-zA-Z_]\w*$/.test(word) &&
@@ -297,35 +284,45 @@ function detectPythonErrors(code) {
                 !functions.has(word) &&
                 !functionParams.has(word) &&
                 !pythonKeywords.has(word)) {
-                errors.push({ type: 'Name Error', line: index + 1, description: `Undefined variable: "${word}"` });
+                errors.push({
+                    line: index + 1,
+                    error: `Undefined variable: "${word}"`,
+                    solution: `Define the variable "${word}" before using it.`,
+                    example_fix: `${word} = 10  # Define before use`
+                });
             }
         });
 
-        // 9️⃣ Detect Division by Zero
+        // Division by Zero
         if (codePart.includes('/ 0') || codePart.includes('/0')) {
-            errors.push({ type: 'Runtime Error', line: index + 1, description: 'Division by zero detected' });
+            errors.push({
+                line: index + 1,
+                error: 'Division by zero detected',
+                solution: 'Ensure the denominator is never zero.',
+                example_fix: `result = num / (denominator if denominator != 0 else 1)`
+            });
         }
 
-        // 🔟 `break` or `continue` outside loop
+        // `break` or `continue` outside loop
         if (codePart === 'break' || codePart === 'continue') {
             if (!insideLoop) {
-                errors.push({ type: 'Syntax Error', line: index + 1, description: `"${codePart}" used outside a loop` });
+                errors.push({
+                    line: index + 1,
+                    error: `"${codePart}" used outside a loop`,
+                    solution: 'Use "break" or "continue" only inside loops.',
+                    example_fix: `for i in range(5):\n    if i == 3:\n        break  # Proper usage`
+                });
             }
         }
 
-        // 1️⃣1️⃣ Detect `return` inside a loop but outside a function
+        // `return` outside a function
         if (codePart.startsWith('return') && !insideFunction) {
-            errors.push({ type: 'Syntax Error', line: index + 1, description: '`return` used outside a function' });
-        }
-
-        // 1️⃣2️⃣ Check if `self` is used outside a class
-        if (codePart.includes("self.") && !insideFunction) {
-            errors.push({ type: 'Syntax Error', line: index + 1, description: '`self` used outside a class method' });
-        }
-
-        // 1️⃣3️⃣ Check if `super()` is used outside a class constructor
-        if (codePart.includes("super()") && !insideFunction) {
-            errors.push({ type: 'Syntax Error', line: index + 1, description: '`super()` used outside a class method' });
+            errors.push({
+                line: index + 1,
+                error: '`return` used outside a function',
+                solution: 'Use "return" only inside function definitions.',
+                example_fix: `def my_function():\n    return "Hello"`
+            });
         }
 
         // Handle loop detection
@@ -340,9 +337,6 @@ function detectPythonErrors(code) {
 
     return errors;
 }
-
-
-
 
 // Function to update bug display
 function updateBugDisplay(errors) {
@@ -363,13 +357,30 @@ function updateBugDisplay(errors) {
     }
     
     errors.forEach(error => {
+        // Determine error type based on error content
+        let errorType = 'Syntax Error';
+        if (error.error && error.error.includes('indentation')) {
+            errorType = 'Indentation Error';
+        } else if (error.error && (error.error.includes('variable') || error.error.includes('Function'))) {
+            errorType = 'Name Error';
+        } else if (error.error && error.error.includes('Division by zero')) {
+            errorType = 'Runtime Error';
+        }
+        
+        // Extract error details
+        const errorMessage = error.error || error.description || '';
+        const solution = error.solution || '';
+        const exampleFix = error.example_fix || '';
+        
         const bugMessage = document.createElement('div');
         bugMessage.className = 'bug-message';
         bugMessage.innerHTML = `
             <div class="bug-icon">🐛</div>
             <div class="bug-text">
-                <p class="bug-title">${error.type}</p>
-                <p class="bug-description">Line ${error.line}: ${error.description}</p>
+                <p class="bug-title">${errorType}</p>
+                <p class="bug-description">Line ${error.line}: ${errorMessage}</p>
+                ${solution ? `<p class="bug-solution"><strong>Solution:</strong> ${solution}</p>` : ''}
+                ${exampleFix ? `<p class="bug-example"><strong>Example:</strong> <code>${exampleFix}</code></p>` : ''}
             </div>
         `;
         

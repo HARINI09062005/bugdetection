@@ -557,14 +557,43 @@ input:checked + .slider:after {
 }
 
 .bug-description {
-    color: var(--text-color);
-    font-size: 0.9em;
-    line-height: 1.4;
+    font-size: 0.9rem;
+    color: var(--error-text);
+    margin-bottom: 6px;
+}
+
+.bug-solution {
+    font-size: 0.9rem;
+    color: var(--success-color);
+    background-color: rgba(76, 175, 80, 0.1);
+    padding: 5px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.bug-example {
+    font-size: 0.9rem;
+    margin-top: 5px;
+    padding: 5px 8px;
+    background-color: rgba(26, 115, 232, 0.1);
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.bug-example code {
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #333;
+}
+
+.dark-mode .bug-example code {
+    color: #ddd;
 }
 
 /* Custom scrollbar for bug content */
 .bug-content::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .bug-content::-webkit-scrollbar-track {
