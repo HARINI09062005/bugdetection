@@ -137,44 +137,48 @@ function updateToggleIcon() {
 // Analyze button functionality
 analyzeBtn.addEventListener('click', () => {
     const code = editor.getValue();
-    const errors = detectPythonErrors(code);
-    updateBugDisplay(errors);
-});
-
-// Function to detect Python syntax errors
-function detectPythonErrors(code) {
-    const errors = [];
     
-    // Basic syntax error detection
-    const lines = code.split('\n');
-    lines.forEach((line, index) => {
-        
-        // Check for common syntax errors
-        if (line.trim().endsWith(':')) {
-            const nextLine = lines[index + 1];
-            if (nextLine && !nextLine.trim().startsWith('    ')) {
-                errors.push({
-                    type: 'Syntax Error',
-                    line: index + 1,
-                    description: 'Missing indentation after colon'
-                });
-            }
+    // Show loading state
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = 'Analyzing...';
+    
+    // Call the backend API
+    fetch('/analyze', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: code })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateBugDisplay(data.errors);
+        } else {
+            // Handle server error
+            const errors = [{
+                type: 'Server Error',
+                line: 0,
+                description: data.error || 'Failed to analyze code'
+            }];
+            updateBugDisplay(errors);
         }
-        
-        // Check for unclosed parentheses
-        const openBrackets = (line.match(/[\(\[{]/g) || []).length;
-        const closeBrackets = (line.match(/[\)\]}]/g) || []).length;
-        if (openBrackets !== closeBrackets) {
-            errors.push({
-                type: 'Syntax Error',
-                line: index + 1,
-                description: 'Unmatched brackets'
-            });
-        }
+    })
+    .catch(error => {
+        // Handle network error
+        const errors = [{
+            type: 'Network Error',
+            line: 0,
+            description: 'Failed to connect to server: ' + error.message
+        }];
+        updateBugDisplay(errors);
+    })
+    .finally(() => {
+        // Reset button state
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze Code';
     });
-    
-    return errors;
-}
+});
 
 // Function to update bug display
 function updateBugDisplay(errors) {
@@ -204,6 +208,28 @@ function updateBugDisplay(errors) {
                 <p class="bug-description">Line ${error.line}: ${error.description}</p>
             </div>
         `;
+        
+        // Add click event to highlight the line in editor
+        if (error.line > 0) {
+            bugMessage.addEventListener('click', () => {
+                editor.setCursor(error.line - 1, 0);
+                editor.focus();
+                // Highlight the line
+                editor.addLineClass(error.line - 1, 'background', 'highlighted-line');
+                // Remove highlight after a few seconds
+                setTimeout(() => {
+                    editor.removeLineClass(error.line - 1, 'background', 'highlighted-line');
+                }, 3000);
+            });
+            bugMessage.style.cursor = 'pointer';
+        }
+        
         bugContent.appendChild(bugMessage);
     });
+    
+    // Expand bug section to show results
+    const bugSection = document.querySelector('.bug-section');
+    if (bugSection.classList.contains('collapsed')) {
+        document.getElementById('toggle-results').click();
+    }
 } 

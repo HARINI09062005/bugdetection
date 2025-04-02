@@ -1,27 +1,52 @@
 # Python Bug Detector
 
-A professional web-based Python bug detection tool that helps identify and display Python code errors in real-time.
+A web application that helps detect bugs and syntax errors in Python code.
 
 ## Features
-- Real-time Python code error detection
-- Clean and professional user interface
-- Syntax error highlighting
-- Error message display
-- Code editor with syntax highlighting
 
-## Setup
-1. Clone this repository
-2. Open `index.html` in your web browser
-3. Start coding and detecting bugs!
+- Syntax error detection
+- Runtime error detection
+- Common logical error detection
+- Line highlighting for errors
+- Light/Dark theme toggle
 
-## Technologies Used
-- HTML5
-- CSS3
-- JavaScript
-- CodeMirror (for code editing)
-- Python syntax highlighting
+## Setup and Installation
 
-## Usage
-1. Enter your Python code in the editor
-2. The bug detection space will automatically display any errors found
-3. Error messages will be shown with detailed information 
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd python-bug-detector
+   ```
+
+2. Install the required packages:
+   ```
+   pip install -r requirements.txt
+   ```
+
+3. Run the Flask application:
+   ```
+   python app.py
+   ```
+
+4. Open your browser and go to:
+   ```
+   http://127.0.0.1:5501
+   ```
+
+## How to Use
+
+1. Upload a Python file or paste your code into the editor
+2. Click the "Analyze Code" button
+3. View the detected errors in the bug detection results section
+4. Click on an error to highlight the corresponding line in the editor
+
+## Technology Stack
+
+- Flask (Backend)
+- JavaScript (Frontend)
+- CodeMirror (Code Editor)
+- HTML/CSS
+
+## License
+
+MIT 

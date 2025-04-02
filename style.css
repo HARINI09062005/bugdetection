@@ -669,4 +669,26 @@ input:checked + .slider:after {
 .bug-section.collapsed .bug-content {
     opacity: 1;
     visibility: visible;
+}
+
+/* Highlighted line in editor */
+.highlighted-line {
+    background-color: rgba(255, 215, 0, 0.2) !important;
+    animation: highlightFade 3s;
+}
+
+@keyframes highlightFade {
+    0% {
+        background-color: rgba(255, 215, 0, 0.5) !important;
+    }
+    100% {
+        background-color: rgba(255, 215, 0, 0.2) !important;
+    }
+}
+
+/* Make bug messages interactive */
+.bug-message[style*="cursor: pointer"]:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 } 
