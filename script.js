@@ -196,21 +196,24 @@ function detectPythonErrors(code) {
 
     let inMultilineString = false;
     let variables = new Set();
-    let functions = new Map(); // function_name -> expected_param_count
-    let functionParams = new Set(); // Track function parameters
+    let functions = new Map();
+    let functionParams = new Set();
     let usedVariables = new Set();
+    let insideLoop = false;
+    let insideFunction = false;
 
-    // ✅ List of Python built-in keywords and functions to ignore
+    // ✅ Python built-in functions & keywords (to avoid false errors)
     const pythonKeywords = new Set([
         "if", "elif", "else", "for", "while", "def", "class", "try", "except", "finally", "return",
         "True", "False", "None", "and", "or", "not", "import", "print", "pass",
         "len", "range", "str", "int", "float", "list", "dict", "set", "tuple",
-        "open", "input", "is", "in", "with", "as", "from", "break", "continue"
+        "open", "input", "is", "in", "with", "as", "from", "break", "continue",
+        "self", "super"
     ]);
 
     lines.forEach((line, index) => {
         let trimmed = line.trim();
-        if (trimmed.startsWith('#')) return; // Ignore comments
+        if (trimmed.startsWith('#')) return;
 
         // ✅ Handle multi-line strings (''' or """)
         const tripleQuoteMatch = trimmed.match(/^(['"]{3})/);
@@ -220,17 +223,17 @@ function detectPythonErrors(code) {
         }
         if (inMultilineString) return;
 
-        let codePart = trimmed.split('#')[0].trim(); // Remove inline comments
+        let codePart = trimmed.split('#')[0].trim();
 
-        // ✅ Ignore strings inside quotes to prevent misidentifying them as variables
+        // ✅ Ignore strings inside quotes
         codePart = codePart.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, "");
 
-        // 1️⃣ Check for missing colon in statements that require it
+        // 1️⃣ Missing colon in required statements
         if (keywordsRequiringColon.test(codePart) && !codePart.endsWith(':')) {
             errors.push({ type: 'Syntax Error', line: index + 1, description: 'Missing colon at the end of statement' });
         }
 
-        // 2️⃣ Check indentation consistency
+        // 2️⃣ Indentation Errors
         const leadingSpaces = line.match(/^\s*/)[0].length;
         if (indentStack.length > 0 && leadingSpaces < indentStack[indentStack.length - 1] && trimmed !== '') {
             errors.push({ type: 'Indentation Error', line: index + 1, description: 'Inconsistent indentation' });
@@ -241,12 +244,7 @@ function detectPythonErrors(code) {
             indentStack.pop();
         }
 
-        // 3️⃣ Unexpected Indentation (only when outside of a function/class block)
-        if (leadingSpaces > 0 && indentStack.length === 0 && !trimmed.startsWith("def ") && !trimmed.startsWith("class ")) {
-            errors.push({ type: 'Indentation Error', line: index + 1, description: 'Unexpected indentation' });
-        }
-
-        // 4️⃣ Check for unmatched brackets
+        // 3️⃣ Check for unmatched brackets
         for (let char of codePart) {
             if ("({[".includes(char)) {
                 bracketStack.push({ char, line: index + 1 });
@@ -258,68 +256,90 @@ function detectPythonErrors(code) {
             }
         }
 
-        // 5️⃣ Unmatched Quotes
+        // 4️⃣ Unmatched Quotes
         const singleQuotes = (codePart.match(/'/g) || []).length;
         const doubleQuotes = (codePart.match(/"/g) || []).length;
         if (singleQuotes % 2 !== 0 || doubleQuotes % 2 !== 0) {
             errors.push({ type: 'Syntax Error', line: index + 1, description: 'Unmatched quotation marks' });
         }
 
-        // 6️⃣ Detect Function Definitions & Parameters
-        const funcDefMatch = codePart.match(/^def\s+([a-zA-Z_]\w*)\(([^)]*)\)/);
-        if (funcDefMatch) {
-            let funcName = funcDefMatch[1];
-            let paramList = funcDefMatch[2].split(',').map(p => p.trim()).filter(p => p !== '');
-            let paramCount = paramList.length;
-
-            // ✅ Track function parameters to prevent them from being marked as undefined
-            paramList.forEach(param => functionParams.add(param));
-
-            if (functions.has(funcName)) {
-                errors.push({ type: 'Warning', line: index + 1, description: `Function "${funcName}" is redefined` });
-            }
-            functions.set(funcName, paramCount);
-        }
-
-        // 7️⃣ Detect Function Calls
-        const funcCallMatch = codePart.match(/([a-zA-Z_]\w*)\(([^)]*)\)/);
-        if (funcCallMatch) {
-            let funcName = funcCallMatch[1];
-            let passedArgsCount = funcCallMatch[2].split(',').filter(p => p.trim() !== '').length;
-            if (functions.has(funcName) && functions.get(funcName) !== passedArgsCount) {
-                errors.push({ type: 'Type Error', line: index + 1, description: `Incorrect number of arguments in function "${funcName}"` });
-            }
-        }
-
-        // 8️⃣ Detect Variable Assignments
+        // 5️⃣ Detect Variable Assignments
         const varMatch = codePart.match(/^([a-zA-Z_]\w*)\s*=/);
         if (varMatch) {
             let varName = varMatch[1];
             variables.add(varName);
         }
 
-        // 9️⃣ Detect Undefined Variables (ignoring Python keywords, functions, and parameters)
+        // 6️⃣ Detect Function Definitions
+        const funcDefMatch = codePart.match(/^def\s+([a-zA-Z_]\w*)\(([^)]*)\)/);
+        if (funcDefMatch) {
+            let funcName = funcDefMatch[1];
+            let paramList = funcDefMatch[2].split(',').map(p => p.trim()).filter(p => p !== '');
+            functionParams = new Set(paramList);
+            functions.set(funcName, paramList.length);
+            insideFunction = true;
+        }
+
+        // 7️⃣ Detect Function Calls Before Definition
+        const funcCallMatch = codePart.match(/([a-zA-Z_]\w*)\(([^)]*)\)/);
+        if (funcCallMatch) {
+            let funcName = funcCallMatch[1];
+            if (!functions.has(funcName) && !pythonKeywords.has(funcName)) {
+                errors.push({ type: 'Name Error', line: index + 1, description: `Function "${funcName}" called before definition` });
+            }
+        }
+
+        // 8️⃣ Detect Undefined Variables
         const words = codePart.split(/[\s(),]+/);
         words.forEach(word => {
             if (/^[a-zA-Z_]\w*$/.test(word) &&
-                !variables.has(word) &&  // Not already assigned
-                !functions.has(word) &&  // Not a function
-                !functionParams.has(word) &&  // Not a function parameter
-                !pythonKeywords.has(word) &&
-                !codePart.includes(`${word} =`)) {  // ✅ Ignore variables being assigned
-            errors.push({ type: 'Name Error', line: index + 1, description: `Undefined variable: "${word}"` });
-    }
-});
+                !variables.has(word) &&
+                !functions.has(word) &&
+                !functionParams.has(word) &&
+                !pythonKeywords.has(word)) {
+                errors.push({ type: 'Name Error', line: index + 1, description: `Undefined variable: "${word}"` });
+            }
+        });
 
-        // 🔟 Prevent False `return` Outside Function Errors
-        if (codePart.startsWith('return') && indentStack.length === 0 && functionParams.size === 0) {
-            errors.push({ type: 'Syntax Error', line: index + 1, description: '`return` statement outside function' });
+        // 9️⃣ Detect Division by Zero
+        if (codePart.includes('/ 0') || codePart.includes('/0')) {
+            errors.push({ type: 'Runtime Error', line: index + 1, description: 'Division by zero detected' });
+        }
+
+        // 🔟 `break` or `continue` outside loop
+        if (codePart === 'break' || codePart === 'continue') {
+            if (!insideLoop) {
+                errors.push({ type: 'Syntax Error', line: index + 1, description: `"${codePart}" used outside a loop` });
+            }
+        }
+
+        // 1️⃣1️⃣ Detect `return` inside a loop but outside a function
+        if (codePart.startsWith('return') && !insideFunction) {
+            errors.push({ type: 'Syntax Error', line: index + 1, description: '`return` used outside a function' });
+        }
+
+        // 1️⃣2️⃣ Check if `self` is used outside a class
+        if (codePart.includes("self.") && !insideFunction) {
+            errors.push({ type: 'Syntax Error', line: index + 1, description: '`self` used outside a class method' });
+        }
+
+        // 1️⃣3️⃣ Check if `super()` is used outside a class constructor
+        if (codePart.includes("super()") && !insideFunction) {
+            errors.push({ type: 'Syntax Error', line: index + 1, description: '`super()` used outside a class method' });
+        }
+
+        // Handle loop detection
+        if (codePart.startsWith("for ") || codePart.startsWith("while ")) {
+            insideLoop = true;
+        }
+        if (codePart === "") {
+            insideLoop = false;
+            insideFunction = false;
         }
     });
 
     return errors;
 }
-
 
 
 
