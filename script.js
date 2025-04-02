@@ -242,7 +242,21 @@ function detectPythonErrors(code) {
                 example_fix: `${codePart}:\n    # Indented block`
             });
         }
+        // Variable Assignments
+        if (/^\s*[a-zA-Z_]\w*\s*=/.test(codePart)) {
+            let varName = codePart.split('=')[0].trim();
+            variables.add(varName);
+        }
 
+        // Function definitions
+        if (codePart.startsWith("def ")) {
+            let funcMatch = codePart.match(/^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)/);
+            if (funcMatch) {
+                functions.set(funcMatch[1], new Set(funcMatch[2].split(",").map(p => p.trim())));
+                functionParams = functions.get(funcMatch[1]);
+                insideFunction = true;
+            }
+        }
         // Indentation Errors
         const leadingSpaces = line.match(/^\s*/)[0].length;
         if (indentStack.length > 0 && leadingSpaces < indentStack[indentStack.length - 1] && trimmed !== '') {
@@ -277,7 +291,7 @@ function detectPythonErrors(code) {
         }
 
         // Undefined Variables
-        const words = codePart.split(/[\s(),]+/);
+        const words = codePart.split(/\s|[(),]+/);
         words.forEach(word => {
             if (/^[a-zA-Z_]\w*$/.test(word) &&
                 !variables.has(word) &&
