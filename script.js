@@ -138,12 +138,11 @@ function updateToggleIcon() {
 analyzeBtn.addEventListener('click', () => {
     const code = editor.getValue();
     
-    // Show loading state
-    analyzeBtn.disabled = true;
-    analyzeBtn.textContent = 'Analyzing...';
+    // First perform client-side error detection
+    const clientErrors = detectPythonErrors(code);
     
-    // Call the backend API
-    fetch('/analyze', {
+    // Then check for additional errors from the server
+    fetch('/api/analyze', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -153,32 +152,73 @@ analyzeBtn.addEventListener('click', () => {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            updateBugDisplay(data.errors);
+            // Combine client and server errors, removing duplicates
+            const serverErrors = data.errors || [];
+            const allErrors = [...clientErrors];
+            
+            // Add server errors that don't already exist in client errors
+            serverErrors.forEach(serverError => {
+                const isDuplicate = allErrors.some(clientError => 
+                    clientError.line === serverError.line && 
+                    clientError.description === serverError.description
+                );
+                
+                if (!isDuplicate) {
+                    allErrors.push(serverError);
+                }
+            });
+            
+            // Sort errors by line number
+            allErrors.sort((a, b) => a.line - b.line);
+            
+            // Update the UI with all errors
+            updateBugDisplay(allErrors);
         } else {
-            // Handle server error
-            const errors = [{
-                type: 'Server Error',
-                line: 0,
-                description: data.error || 'Failed to analyze code'
-            }];
-            updateBugDisplay(errors);
+            // If server fails, just show client-side errors
+            updateBugDisplay(clientErrors);
+            console.error('Server error:', data.error);
         }
     })
     .catch(error => {
-        // Handle network error
-        const errors = [{
-            type: 'Network Error',
-            line: 0,
-            description: 'Failed to connect to server: ' + error.message
-        }];
-        updateBugDisplay(errors);
-    })
-    .finally(() => {
-        // Reset button state
-        analyzeBtn.disabled = false;
-        analyzeBtn.textContent = 'Analyze Code';
+        // If fetch fails, just use client-side errors
+        updateBugDisplay(clientErrors);
+        console.error('Network error:', error);
     });
 });
+
+// Function to detect Python syntax errors (client-side)
+function detectPythonErrors(code) {
+    const errors = [];
+    
+    // Basic syntax error detection
+    const lines = code.split('\n');
+    lines.forEach((line, index) => {
+        // Check for common syntax errors
+        if (line.trim().endsWith(':')) {
+            const nextLine = lines[index + 1];
+            if (nextLine && !nextLine.trim().startsWith('    ')) {
+                errors.push({
+                    type: 'Syntax Error',
+                    line: index + 1,
+                    description: 'Missing indentation after colon'
+                });
+            }
+        }
+        
+        // Check for unclosed parentheses
+        const openBrackets = (line.match(/[\(\[{]/g) || []).length;
+        const closeBrackets = (line.match(/[\)\]}]/g) || []).length;
+        if (openBrackets !== closeBrackets) {
+            errors.push({
+                type: 'Syntax Error',
+                line: index + 1,
+                description: 'Unmatched brackets'
+            });
+        }
+    });
+    
+    return errors;
+}
 
 // Function to update bug display
 function updateBugDisplay(errors) {
@@ -214,22 +254,10 @@ function updateBugDisplay(errors) {
             bugMessage.addEventListener('click', () => {
                 editor.setCursor(error.line - 1, 0);
                 editor.focus();
-                // Highlight the line
-                editor.addLineClass(error.line - 1, 'background', 'highlighted-line');
-                // Remove highlight after a few seconds
-                setTimeout(() => {
-                    editor.removeLineClass(error.line - 1, 'background', 'highlighted-line');
-                }, 3000);
             });
             bugMessage.style.cursor = 'pointer';
         }
         
         bugContent.appendChild(bugMessage);
     });
-    
-    // Expand bug section to show results
-    const bugSection = document.querySelector('.bug-section');
-    if (bugSection.classList.contains('collapsed')) {
-        document.getElementById('toggle-results').click();
-    }
 } 
