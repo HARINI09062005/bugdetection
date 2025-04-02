@@ -1,0 +1,464 @@
+:root {
+    --primary-color: #1a73e8;
+    --secondary-color: #f0f2f5;
+    --text-color: #333;
+    --bg-color: #fff;
+    --border-color: #ddd;
+    --error-bg: #fff3e0;
+    --error-text: #e65100;
+    --success-color: #4caf50;
+}
+
+.dark-mode {
+    --primary-color: #2196f3;
+    --secondary-color: #1a1a1a;
+    --text-color: #fff;
+    --bg-color: #2d2d2d;
+    --border-color: #404040;
+    --error-bg: #3d2b1f;
+    --error-text: #ff8a65;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.navbar {
+    background-color: var(--bg-color);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    margin-bottom: 20px;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.theme-toggle {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.theme-toggle:hover {
+    background-color: var(--border-color);
+}
+
+.container {
+    max-width: 1400px;
+    margin: 80px auto 0;
+    padding: 20px;
+    position: relative;
+    height: calc(100vh - 100px);
+    z-index: 1;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+    height: calc(100vh - 120px);
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.left-panel {
+    background: var(--bg-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 100px;
+    margin-bottom: 40px;
+    z-index: 3;
+}
+
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 3;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+}
+
+.upload-area i {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.upload-area p {
+    margin: 0.5rem 0;
+    color: var(--text-color);
+}
+
+.upload-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background-color 0.3s;
+}
+
+.upload-btn:hover {
+    background-color: #1557b0;
+}
+
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+    height: 100%;
+    position: relative;
+    padding-bottom: 40px;
+    overflow: hidden;
+}
+
+.editor-section {
+    flex: 0 0 60%;
+    background: var(--bg-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 2;
+    height: 60%;
+    margin-bottom: 60px;
+}
+
+.editor-header {
+    background: var(--primary-color);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 10;
+}
+
+.editor-header h2 {
+    font-size: 1.2em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 120px;
+}
+
+.editor-container {
+    position: relative;
+    flex: 1;
+    overflow: auto;
+    background: var(--bg-color);
+    height: calc(100% - 50px);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.editor-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--text-color);
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.editor-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.editor-placeholder p {
+    font-size: 1.1rem;
+}
+
+.editor-container.has-content .editor-placeholder {
+    opacity: 0;
+}
+
+.CodeMirror {
+    height: 100% !important;
+    font-size: 14px;
+}
+
+.action-section {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.analyze-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    margin-top: -10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    transition: background-color 0.3s;
+    min-width: 120px;
+    justify-content: center;
+    z-index: 11;
+}
+
+.analyze-btn:hover {
+    background-color: #44474b;
+}
+
+.analyze-btn:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.bug-section {
+    background: var(--bg-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    position: fixed;
+    bottom: 30px;
+    left: 20px;
+    right: 20px;
+    height: 30%;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    z-index: 1;
+    margin-top: 20px;
+    background: linear-gradient(to bottom, var(--bg-color), var(--bg-color));
+    width: calc(100% - 40px);
+    transition: none;
+}
+
+.bug-header {
+    background: var(--primary-color);
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bug-header h2 {
+    font-size: 1.1em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bug-header h2 i {
+    font-size: 1.1em;
+}
+
+.bug-content {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+    margin-top: 20px;
+}
+
+.bug-message {
+    display: flex;
+    align-items: flex-start;
+    background: var(--bg-color);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--primary-color);
+    transition: none;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.bug-message:hover {
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.bug-icon {
+    font-size: 24px;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.bug-text {
+    flex: 1;
+}
+
+.bug-title {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 1em;
+}
+
+.bug-description {
+    color: var(--text-color);
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+/* Custom scrollbar for bug content */
+.bug-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.bug-content::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+.bug-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.bug-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Empty state styling */
+.bug-content:empty::before {
+    content: "No bugs detected";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-color);
+    opacity: 0.6;
+    font-size: 1.1em;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--secondary-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Remove the separator styles */
+.separator {
+    display: none;
+}
+
+/* Update hover effects for better interaction */
+.editor-section:hover {
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.2);
+}
+
+.bug-section:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Remove gradient overlays and use shadows instead */
+.editor-section::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--border-color);
+    opacity: 0.8;
+}
+
+/* Add spacing between bug messages */
+.bug-message:last-child {
+    margin-bottom: 0;
+}
+
+/* Remove unwanted spacing */
+.editor-section + .bug-section {
+    margin-top: 0;
+}
+
+/* Remove toggle button styles */
+.toggle-btn {
+    display: none;
+}
+
+/* Remove collapsed state styles */
+.bug-section.collapsed {
+    height: auto;
+} 
