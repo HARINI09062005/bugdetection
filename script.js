@@ -29,15 +29,20 @@ const analyzeBtn = document.getElementById('analyze-btn');
 const themeToggle = document.getElementById('theme-toggle');
 const body = document.body;
 
-themeToggle.addEventListener('click', () => {
-    body.classList.toggle('dark-mode');
-    const icon = themeToggle.querySelector('i');
-    if (body.classList.contains('dark-mode')) {
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
+// Check for saved theme preference
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark') {
+    body.classList.add('dark-mode');
+    themeToggle.checked = true;
+}
+
+themeToggle.addEventListener('change', () => {
+    if (themeToggle.checked) {
+        body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
     } else {
-        icon.classList.remove('fa-sun');
-        icon.classList.add('fa-moon');
+        body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
     }
 });
 

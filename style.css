@@ -10,7 +10,7 @@
 }
 
 .dark-mode {
-    --primary-color: #2196f3;
+    --primary-color: #1a73e8;
     --secondary-color: #1a1a1a;
     --text-color: #fff;
     --bg-color: #2d2d2d;
@@ -56,19 +56,130 @@ body {
     color: var(--primary-color);
 }
 
-.theme-toggle {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: background-color 0.3s;
+.theme-control {
+    display: flex;
+    align-items: center;
+    margin-left: 20px;
+    position: relative;
+    min-width: 120px;
 }
 
-.theme-toggle:hover {
-    background-color: var(--border-color);
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+    margin-left: auto;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+/* Add theme text labels */
+.theme-switch::before {
+    content: "Light";
+    position: absolute;
+    right: 54px;
+    top: 4px;
+    font-size: 13px;
+    color: var(--text-color);
+    font-weight: 500;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.theme-switch::after {
+    content: "Dark";
+    position: absolute;
+    right: 54px;
+    top: 4px;
+    font-size: 13px;
+    color: var(--text-color);
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* Show/hide appropriate label based on theme */
+body.dark-mode .theme-switch::before {
+    opacity: 0;
+}
+
+body.dark-mode .theme-switch::after {
+    opacity: 1;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Remove old theme toggle styles */
+.theme-toggle {
+    display: none;
+}
+
+/* Add light/dark icons to slider */
+.slider:after {
+    content: "☀️";
+    position: absolute;
+    left: 8px;
+    top: 5px;
+    font-size: 14px;
+    opacity: 0;
+    transition: .4s;
+}
+
+input:checked + .slider:after {
+    content: "🌙";
+    right: 8px;
+    left: auto;
+    opacity: 0;
+}
+
+.dark-mode .slider:before {
+    background-color: #333;
 }
 
 .container {
