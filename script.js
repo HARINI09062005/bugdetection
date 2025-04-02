@@ -189,36 +189,140 @@ analyzeBtn.addEventListener('click', () => {
 // Function to detect Python syntax errors (client-side)
 function detectPythonErrors(code) {
     const errors = [];
-    
-    // Basic syntax error detection
     const lines = code.split('\n');
+    const bracketStack = [];
+    const indentStack = [];
+    const keywordsRequiringColon = /^(if|elif|else|for|while|def|class|try|except|finally)\b/;
+
+    let inMultilineString = false;
+    let variables = new Set();
+    let functions = new Map(); // function_name -> expected_param_count
+    let functionParams = new Set(); // Track function parameters
+    let usedVariables = new Set();
+
+    // ✅ List of Python built-in keywords and functions to ignore
+    const pythonKeywords = new Set([
+        "if", "elif", "else", "for", "while", "def", "class", "try", "except", "finally", "return",
+        "True", "False", "None", "and", "or", "not", "import", "print", "pass",
+        "len", "range", "str", "int", "float", "list", "dict", "set", "tuple",
+        "open", "input", "is", "in", "with", "as", "from", "break", "continue"
+    ]);
+
     lines.forEach((line, index) => {
-        // Check for common syntax errors
-        if (line.trim().endsWith(':')) {
-            const nextLine = lines[index + 1];
-            if (nextLine && !nextLine.trim().startsWith('    ')) {
-                errors.push({
-                    type: 'Syntax Error',
-                    line: index + 1,
-                    description: 'Missing indentation after colon'
-                });
+        let trimmed = line.trim();
+        if (trimmed.startsWith('#')) return; // Ignore comments
+
+        // ✅ Handle multi-line strings (''' or """)
+        const tripleQuoteMatch = trimmed.match(/^(['"]{3})/);
+        if (tripleQuoteMatch) {
+            inMultilineString = !inMultilineString;
+            return;
+        }
+        if (inMultilineString) return;
+
+        let codePart = trimmed.split('#')[0].trim(); // Remove inline comments
+
+        // ✅ Ignore strings inside quotes to prevent misidentifying them as variables
+        codePart = codePart.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, "");
+
+        // 1️⃣ Check for missing colon in statements that require it
+        if (keywordsRequiringColon.test(codePart) && !codePart.endsWith(':')) {
+            errors.push({ type: 'Syntax Error', line: index + 1, description: 'Missing colon at the end of statement' });
+        }
+
+        // 2️⃣ Check indentation consistency
+        const leadingSpaces = line.match(/^\s*/)[0].length;
+        if (indentStack.length > 0 && leadingSpaces < indentStack[indentStack.length - 1] && trimmed !== '') {
+            errors.push({ type: 'Indentation Error', line: index + 1, description: 'Inconsistent indentation' });
+        }
+        if (codePart.endsWith(':')) {
+            indentStack.push(leadingSpaces + 4);
+        } else if (indentStack.length > 0 && leadingSpaces < indentStack[indentStack.length - 1]) {
+            indentStack.pop();
+        }
+
+        // 3️⃣ Unexpected Indentation (only when outside of a function/class block)
+        if (leadingSpaces > 0 && indentStack.length === 0 && !trimmed.startsWith("def ") && !trimmed.startsWith("class ")) {
+            errors.push({ type: 'Indentation Error', line: index + 1, description: 'Unexpected indentation' });
+        }
+
+        // 4️⃣ Check for unmatched brackets
+        for (let char of codePart) {
+            if ("({[".includes(char)) {
+                bracketStack.push({ char, line: index + 1 });
+            } else if (")}]".includes(char)) {
+                const last = bracketStack.pop();
+                if (!last || "({[".indexOf(last.char) !== ")}]".indexOf(char)) {
+                    errors.push({ type: 'Syntax Error', line: index + 1, description: `Unmatched bracket: ${char}` });
+                }
             }
         }
-        
-        // Check for unclosed parentheses
-        const openBrackets = (line.match(/[\(\[{]/g) || []).length;
-        const closeBrackets = (line.match(/[\)\]}]/g) || []).length;
-        if (openBrackets !== closeBrackets) {
-            errors.push({
-                type: 'Syntax Error',
-                line: index + 1,
-                description: 'Unmatched brackets'
-            });
+
+        // 5️⃣ Unmatched Quotes
+        const singleQuotes = (codePart.match(/'/g) || []).length;
+        const doubleQuotes = (codePart.match(/"/g) || []).length;
+        if (singleQuotes % 2 !== 0 || doubleQuotes % 2 !== 0) {
+            errors.push({ type: 'Syntax Error', line: index + 1, description: 'Unmatched quotation marks' });
+        }
+
+        // 6️⃣ Detect Function Definitions & Parameters
+        const funcDefMatch = codePart.match(/^def\s+([a-zA-Z_]\w*)\(([^)]*)\)/);
+        if (funcDefMatch) {
+            let funcName = funcDefMatch[1];
+            let paramList = funcDefMatch[2].split(',').map(p => p.trim()).filter(p => p !== '');
+            let paramCount = paramList.length;
+
+            // ✅ Track function parameters to prevent them from being marked as undefined
+            paramList.forEach(param => functionParams.add(param));
+
+            if (functions.has(funcName)) {
+                errors.push({ type: 'Warning', line: index + 1, description: `Function "${funcName}" is redefined` });
+            }
+            functions.set(funcName, paramCount);
+        }
+
+        // 7️⃣ Detect Function Calls
+        const funcCallMatch = codePart.match(/([a-zA-Z_]\w*)\(([^)]*)\)/);
+        if (funcCallMatch) {
+            let funcName = funcCallMatch[1];
+            let passedArgsCount = funcCallMatch[2].split(',').filter(p => p.trim() !== '').length;
+            if (functions.has(funcName) && functions.get(funcName) !== passedArgsCount) {
+                errors.push({ type: 'Type Error', line: index + 1, description: `Incorrect number of arguments in function "${funcName}"` });
+            }
+        }
+
+        // 8️⃣ Detect Variable Assignments
+        const varMatch = codePart.match(/^([a-zA-Z_]\w*)\s*=/);
+        if (varMatch) {
+            let varName = varMatch[1];
+            variables.add(varName);
+        }
+
+        // 9️⃣ Detect Undefined Variables (ignoring Python keywords, functions, and parameters)
+        const words = codePart.split(/[\s(),]+/);
+        words.forEach(word => {
+            if (/^[a-zA-Z_]\w*$/.test(word) &&
+                !variables.has(word) &&  // Not already assigned
+                !functions.has(word) &&  // Not a function
+                !functionParams.has(word) &&  // Not a function parameter
+                !pythonKeywords.has(word) &&
+                !codePart.includes(`${word} =`)) {  // ✅ Ignore variables being assigned
+            errors.push({ type: 'Name Error', line: index + 1, description: `Undefined variable: "${word}"` });
+    }
+});
+
+        // 🔟 Prevent False `return` Outside Function Errors
+        if (codePart.startsWith('return') && indentStack.length === 0 && functionParams.size === 0) {
+            errors.push({ type: 'Syntax Error', line: index + 1, description: '`return` statement outside function' });
         }
     });
-    
+
     return errors;
 }
+
+
+
+
 
 // Function to update bug display
 function updateBugDisplay(errors) {
