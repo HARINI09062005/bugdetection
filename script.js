@@ -87,6 +87,7 @@ function handleFile(file) {
             editor.setValue(e.target.result);
             editorContainer.classList.add('has-content');
             analyzeBtn.disabled = false;
+            analyzeBtn.classList.add('active');
         };
         reader.readAsText(file);
     } else {
