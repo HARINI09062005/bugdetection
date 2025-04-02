@@ -106,15 +106,12 @@ bugSection.classList.remove('expanded');
 bugSection.classList.add('collapsed');
 updateToggleIcon();
 
-// Add click event to both the button and header
+// Only add click event to the toggle button, not the header
 toggleBtn.addEventListener('click', toggleBugSection);
-bugHeader.addEventListener('click', toggleBugSection);
 
 function toggleBugSection(e) {
-    // Don't toggle if clicking on the content area
-    if (e.target.closest('.bug-content') && !e.target.closest('.bug-header')) {
-        return;
-    }
+    // Stop event propagation to prevent any parent elements from receiving the click
+    e.stopPropagation();
     
     bugSection.classList.toggle('expanded');
     bugSection.classList.toggle('collapsed');
@@ -124,11 +121,11 @@ function toggleBugSection(e) {
 function updateToggleIcon() {
     const icon = toggleBtn.querySelector('i');
     if (bugSection.classList.contains('collapsed')) {
-        icon.classList.remove('fa-chevron-up');
-        icon.classList.add('fa-chevron-down');
-    } else {
         icon.classList.remove('fa-chevron-down');
         icon.classList.add('fa-chevron-up');
+    } else {
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
     }
 }
 
