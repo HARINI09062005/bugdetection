@@ -199,7 +199,6 @@ body {
     background: var(--bg-color);
     height: calc(100% - 50px);
     padding: 20px;
-    margin-bottom: 30px;
 }
 
 .editor-placeholder {
