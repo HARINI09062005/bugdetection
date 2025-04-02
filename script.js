@@ -98,10 +98,30 @@ function handleFile(file) {
 // Bug section toggle functionality
 const toggleBtn = document.getElementById('toggle-results');
 const bugSection = document.querySelector('.bug-section');
+const bugHeader = document.querySelector('.bug-header');
 const bugContent = document.querySelector('.bug-content');
 
-toggleBtn.addEventListener('click', () => {
+// Initialize in collapsed state
+bugSection.classList.remove('expanded');
+bugSection.classList.add('collapsed');
+updateToggleIcon();
+
+// Add click event to both the button and header
+toggleBtn.addEventListener('click', toggleBugSection);
+bugHeader.addEventListener('click', toggleBugSection);
+
+function toggleBugSection(e) {
+    // Don't toggle if clicking on the content area
+    if (e.target.closest('.bug-content') && !e.target.closest('.bug-header')) {
+        return;
+    }
+    
+    bugSection.classList.toggle('expanded');
     bugSection.classList.toggle('collapsed');
+    updateToggleIcon();
+}
+
+function updateToggleIcon() {
     const icon = toggleBtn.querySelector('i');
     if (bugSection.classList.contains('collapsed')) {
         icon.classList.remove('fa-chevron-up');
@@ -110,7 +130,7 @@ toggleBtn.addEventListener('click', () => {
         icon.classList.remove('fa-chevron-down');
         icon.classList.add('fa-chevron-up');
     }
-});
+}
 
 // Analyze button functionality
 analyzeBtn.addEventListener('click', () => {
@@ -126,6 +146,7 @@ function detectPythonErrors(code) {
     // Basic syntax error detection
     const lines = code.split('\n');
     lines.forEach((line, index) => {
+        
         // Check for common syntax errors
         if (line.trim().endsWith(':')) {
             const nextLine = lines[index + 1];

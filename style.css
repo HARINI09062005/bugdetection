@@ -292,25 +292,48 @@ body {
     background-color: #1e7e34;
 }
 
+.toggle-btn {
+    display: block;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-btn:active {
+    transform: scale(0.9);
+}
+
 .bug-section {
-    background: var(--bg-color);
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
+    background-color: var(--primary-color);
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
     position: fixed;
-    bottom: 30px;
-    left: 20px;
-    right: 20px;
-    height: 30%;
-    min-height: 150px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    margin-top: 10px;
+    overflow: hidden;
+    border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border-color);
-    z-index: 1;
-    margin-top: 20px;
-    background: linear-gradient(to bottom, var(--bg-color), var(--bg-color));
-    width: calc(100% - 40px);
-    transition: none;
+}
+
+.bug-section.expanded {
+    height: 400px;
+}
+
+.bug-section.collapsed {
+    height: 250px;
 }
 
 .bug-header {
@@ -322,6 +345,8 @@ body {
     align-items: center;
     user-select: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .bug-header h2 {
@@ -346,7 +371,9 @@ body {
     gap: 10px;
     position: relative;
     z-index: 1;
-    margin-top: 20px;
+    transition: opacity 0.3s;
+    max-height: calc(100% - 50px);
+    overflow-y: auto;
 }
 
 .bug-message {
@@ -474,12 +501,27 @@ body {
     margin-top: 0;
 }
 
-/* Remove toggle button styles */
-.toggle-btn {
-    display: none;
+/* Style for the preview of the first bug message in collapsed state */
+.bug-section:not(.expanded) .bug-message:not(:first-child) {
+    display: flex;
 }
 
-/* Remove collapsed state styles */
-.bug-section.collapsed {
-    height: auto;
+.bug-section:not(.expanded) .bug-message {
+    margin-bottom: 10px;
+    padding: 12px;
+    max-height: none;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+}
+
+.bug-section:not(.expanded) .bug-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(100% - 50px);
+}
+
+.bug-section.collapsed .bug-content {
+    opacity: 1;
+    visibility: visible;
 } 
