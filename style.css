@@ -255,7 +255,7 @@ body {
     font-size: 0.9rem;
     display: inline-flex;
     align-items: center;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.2s;
     min-width: 120px;
     justify-content: center;
     z-index: 11;
@@ -265,10 +265,16 @@ body {
     background-color: #44474b;
 }
 
+.analyze-btn:active {
+    transform: scale(0.95);
+    background-color: #0c52b0;
+}
+
 .analyze-btn:disabled {
     background-color: var(--border-color);
     cursor: not-allowed;
     opacity: 0.7;
+    transform: none;
 }
 
 .analyze-btn.active {
@@ -281,6 +287,10 @@ body {
     color: white;
 }
 
+.analyze-btn.active:active {
+    transform: scale(0.95);
+    background-color: #1e7e34;
+}
 
 .bug-section {
     background: var(--bg-color);
